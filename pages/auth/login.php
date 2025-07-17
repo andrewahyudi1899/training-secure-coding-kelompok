@@ -5,38 +5,67 @@ require_once '../../includes/auth.php';
 
 $error = '';
 
+$max_attempts = 5;
+$lockout_time = 60;
+$start_time = microtime(true);
+$attempts = $_SESSION['login_attempts'] ?? 0;
+$is_login = false;
+
+if (!isset($_SESSION['login_attempts'])) {
+    $_SESSION['login_attempts'] = 0;
+    $_SESSION['start_attempt_time'] = microtime(true);
+}
+
 // Handle login BEFORE any output
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $current_time = microtime(true);
     $username = htmlspecialchars($_POST['username']);
     $password = htmlspecialchars($_POST['password']);
 
-    // if (!filter_var($username, FILTER_VALIDATE_EMAIL)) {
-    //     $error = "Invalid email format";
-    // }
-    $pattern = "/^[a-zA-Z0-9]+$/";
-    if(!preg_match($pattern, $username)) {
-        // $response['message'] = "Username only alphanumeric";
-        // return $response;
-        $error = 'Username only alphanumeric';
-    }
-
-    $auth = new Auth();
-    $user = $auth->login($username, $password);
-    
-
-    if ($user) {
-        $_SESSION['user_id'] = $user['id'];
-        
-        // Redirect based on role
-        if ($user['role'] === 'member') {
-            header('Location: ../member/dashboard.php');
-        } else {
-            header('Location: ../company/dashboard.php');
-        }
-        exit;
+    if ($_SESSION['login_attempts'] >= $max_attempts && ($current_time - $_SESSION['start_attempt_time']) < $lockout_time) {
+        $remaining = (int)($lockout_time - ($current_time - $_SESSION['start_attempt_time']));
+        $error = "Too many login attempts. Try again in $remaining seconds.";
     } else {
-        $error = 'Invalid username or password';
+
+        if (($current_time - $_SESSION['start_attempt_time']) >= $lockout_time) {
+            $_SESSION['login_attempts'] = 0;
+            $_SESSION['start_attempt_time'] = microtime(true);
+        }
+
+        // if (!filter_var($username, FILTER_VALIDATE_EMAIL)) {
+        //     $error = "Invalid email format";
+        // }
+        $pattern = "/^[a-zA-Z0-9]+$/";
+        if(!preg_match($pattern, $username)) {
+            // $response['message'] = "Username only alphanumeric";
+            // return $response;
+            $error = 'Username only alphanumeric';
+        } else {
+            $auth = new Auth();
+            $_SESSION['login_attempts'] = $attempts + 1;
+            $user = $auth->login($username, $password);
+            if ($user) {
+                $_SESSION['user_id'] = $user['id'];
+                
+                // Redirect based on role
+                if ($user['role'] === 'member') {
+                    header('Location: ../member/dashboard.php');
+                } else {
+                    header('Location: ../company/dashboard.php');
+                }
+                $is_login = true;
+                exit;
+            } else {
+                $_SESSION['last_attempt_time'] = $current_time;
+                $error = "Invalid credentials. Attempt #" . (int)$_SESSION['login_attempts'];
+                // $error = 'Invalid username or password';
+            }
+
+        }
+    
     }
+
+
 }
 
 // Include templates AFTER login processing
