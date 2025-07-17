@@ -21,7 +21,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $auth = new Auth();
     
     // Store password in plain text - major vulnerability
-    if ($auth->register($username, $email, $password, $role)) {
+    $register = $auth->register($username, $email, $password, $role);
+    $status = $register['status'];
+    $responseMessage = $register['message'];
+    if ($status == true) {
         // Send verification email after successful registration
         require_once '../../includes/email.php';
         $emailService = new EmailService();
@@ -37,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } else {
         $error = 'Registration failed. Please try again.';
+        $error = $responseMessage;
     }
 }
 
