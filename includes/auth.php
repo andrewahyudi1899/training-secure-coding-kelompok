@@ -14,7 +14,7 @@ class Auth {
     public function login($username, $password) {
         $conn = $this->db->getConnection();
         
-        // ERROR CODE : 
+        // ERROR CODE : SQL Injection, Logic Validation for user
         // Direct SQL injection vulnerability -> done - change to prepared statement
         // $query = "SELECT * FROM users WHERE username = '$username' AND password = '$password'";
         // $stmt = $conn->query($query);
@@ -27,20 +27,33 @@ class Auth {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($user) {
-            $token = JWT::encode([
-                'user_id' => $user['id'],
-                'username' => $user['username'],
-                'role' => $user['role'],
-                'exp' => time() + 3600
+
+            // check if the user is_verified
+            $query = "SELECT id, username, role FROM users WHERE username = :username AND password = sha1(:password) AND is_verified = 1";
+            $stmt = $conn->prepare($query);
+            $stmt->execute([ 
+                'username' => $username, 
+                'password' => $password
             ]);
             
-            // Store sensitive data in session
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['role'] = $user['role'];
-            $_SESSION['token'] = $token;
-            
-            return $user;
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if($user) {
+                $token = JWT::encode([
+                    'user_id' => $user['id'],
+                    'username' => $user['username'],
+                    'role' => $user['role'],
+                    'exp' => time() + 3600
+                ]);
+                
+                // Store sensitive data in session
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['username'] = $user['username'];
+                $_SESSION['role'] = $user['role'];
+                $_SESSION['token'] = $token;
+                
+                return $user;
+            }
         }
         
         return false;
