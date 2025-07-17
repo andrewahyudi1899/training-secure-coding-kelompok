@@ -40,35 +40,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $job_type = $_POST['job_type'];
         $job_id = $_POST['job_id'] ?? null;
 
-    // Use addslashes to prevent SQL crash but still vulnerable to XSS
-    $title_escaped = addslashes($title);
-    $description_escaped = addslashes($description);
-    $requirements_escaped = addslashes($requirements);
-    $location_escaped = addslashes($location);
-    $job_type_escaped = addslashes($job_type);
+        // Use addslashes to prevent SQL crash but still vulnerable to XSS
+        $title_escaped = addslashes(htmlspecialchars($title));
+        $description_escaped = addslashes(htmlspecialchars($description));
+        $requirements_escaped = addslashes(htmlspecialchars($requirements));
+        $location_escaped = addslashes(htmlspecialchars($location));
+        $job_type_escaped = addslashes(htmlspecialchars($job_type));
 
-    if ($job_id) {
-        // Check ownership before update
-        $job_id_escaped = addslashes($job_id);
-        $check_query = "SELECT company_id FROM jobs WHERE id = '$job_id_escaped'";
-        $check_result = $conn->query($check_query);
-        $job_owner = $check_result->fetch(PDO::FETCH_ASSOC);
+        if ($job_id) {
+            // Check ownership before update
+            $job_id_escaped = addslashes(htmlspecialchars($job_id));
+            $check_query = "SELECT company_id FROM jobs WHERE id = :jobidescaped";
+            
+            $stmt = $conn->prepare($check_query);
+            $stmt->bindParam(':jobidescaped', $job_id_escaped);
+            $stmt->execute();
 
-        if ($job_owner && $job_owner['company_id'] == $user_id) {
-            // Update job - Vulnerable: SQL injection but with ownership check
-            $query = "UPDATE jobs SET title = '$title_escaped', description = '$description_escaped',
-                     requirements = '$requirements_escaped', salary_min = $salary_min, salary_max = $salary_max,
-                     location = '$location_escaped', job_type = '$job_type_escaped' WHERE id = '$job_id_escaped' AND company_id = $user_id";
-            $action = 'updated';
+            $result = $stmt->fetchAll();
+            if ($result && count($result) > 0) {
+                $job_owner = $result[0];
+            } else {
+                $job_owner = [];
+            }
+
+            // $check_result = $conn->query($check_query);
+            // $job_owner = $check_result->fetch(PDO::FETCH_ASSOC);
+
+            if ($job_owner && $job_owner['company_id'] == $user_id) {
+                // Update job - Vulnerable: SQL injection but with ownership check
+                $query = "UPDATE jobs SET title = '$title_escaped', description = '$description_escaped',
+                        requirements = '$requirements_escaped', salary_min = $salary_min, salary_max = $salary_max,
+                        location = '$location_escaped', job_type = '$job_type_escaped' WHERE id = '$job_id_escaped' AND company_id = $user_id";
+                $action = 'updated';
+            } else {
+                $error = "Unauthorized: You can only edit your own jobs.";
+            }
         } else {
-            $error = "Unauthorized: You can only edit your own jobs.";
+            // Create job - Vulnerable: SQL injection
+            $query = "INSERT INTO jobs (company_id, title, description, requirements, salary_min, salary_max, location, job_type)
+                    VALUES ($user_id, '$title_escaped', '$description_escaped', '$requirements_escaped', $salary_min, $salary_max, '$location_escaped', '$job_type_escaped')";
+            $action = 'created';
         }
-    } else {
-        // Create job - Vulnerable: SQL injection
-        $query = "INSERT INTO jobs (company_id, title, description, requirements, salary_min, salary_max, location, job_type)
-                 VALUES ($user_id, '$title_escaped', '$description_escaped', '$requirements_escaped', $salary_min, $salary_max, '$location_escaped', '$job_type_escaped')";
-        $action = 'created';
-    }
 
         if (isset($query) && $conn->query($query)) {
             $message = "Job $action successfully!";
@@ -83,9 +95,20 @@ if (isset($_GET['delete'])) {
     $job_id = addslashes($_GET['delete']); // Prevent SQL crash but still vulnerable
 
     // Check ownership before delete
-    $check_query = "SELECT company_id FROM jobs WHERE id = '$job_id'";
-    $check_result = $conn->query($check_query);
-    $job_owner = $check_result->fetch(PDO::FETCH_ASSOC);
+    $check_query = "SELECT company_id FROM jobs WHERE id = :jobid";
+
+    $stmt = $conn->prepare($check_query);
+    $stmt->bindParam(':jobid', $job_id);
+    $stmt->execute();
+
+    $result = $stmt->fetchAll();
+    if ($result && count($result) > 0) {
+        $job_owner = $result[0];
+    } else {
+        $job_owner = [];
+    }
+    // $check_result = $conn->query($check_query);
+    // $job_owner = $check_result->fetch(PDO::FETCH_ASSOC);
 
     if ($job_owner && $job_owner['company_id'] == $user_id) {
         // Delete job with ownership check - still vulnerable to SQL injection
@@ -107,10 +130,23 @@ $jobs = $conn->query($query);
 // Get job for editing with ownership check
 $edit_job = null;
 if (isset($_GET['edit'])) {
-    $edit_id = addslashes($_GET['edit']); // Prevent SQL crash but still vulnerable
-    $query = "SELECT * FROM jobs WHERE id = '$edit_id' AND company_id = $user_id";
-    $result = $conn->query($query);
-    $edit_job = $result->fetch(PDO::FETCH_ASSOC);
+    $edit_id = addslashes(htmlspecialchars($_GET['edit'])); // Prevent SQL crash but still vulnerable
+    $query = "SELECT * FROM jobs WHERE id = :editid AND company_id = :userid";
+
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':editid', $edit_id);
+    $stmt->bindParam(':companyid', $user_id);
+    $stmt->execute();
+
+    $result = $stmt->fetchAll();
+    if ($result && count($result) > 0) {
+        $edit_job = $result[0];
+    } else {
+        $edit_job = [];
+    }
+
+    // $result = $conn->query($query);
+    // $edit_job = $result->fetch(PDO::FETCH_ASSOC);
 
     if (!$edit_job) {
         $error = "Unauthorized: You can only edit your own jobs.";
