@@ -16,14 +16,12 @@ if (!isset($_SESSION['login_attempts'])) {
     $_SESSION['start_attempt_time'] = microtime(true);
 }
 
-if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-
 // Handle login BEFORE any output
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-        $error = 'Invalid CSRF token';
+    // var_dump($_SESSION['token'],  $_POST['token']);
+    $token = $_POST['token'] ?? 0;
+    if (!isset($_SESSION['token']) || $token !== $_SESSION['token']) {
+        $error = 'Invalid request. Please try again.';
     } else {
         $current_time = microtime(true);
         $username = htmlspecialchars($_POST['username']);
@@ -76,6 +74,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 }
 
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrf_token = $_SESSION['csrf_token'];
+
 // Include templates AFTER login processing
 require_once '../../templates/header.php';
 require_once '../../templates/nav.php';
@@ -103,7 +106,8 @@ require_once '../../templates/nav.php';
                             <label for="password" class="form-label">Password</label>
                             <input type="password" class="form-control" id="password" name="password" required>
                         </div>
-                        
+                        <input type="hidden" name="token" value="<?php echo htmlspecialchars($_SESSION['token'], ENT_QUOTES, 'UTF-8'); ?>">
+
                         <button type="submit" class="btn btn-primary w-100">Login</button>
                     </form>
                     
