@@ -12,15 +12,17 @@ if (isset($_SESSION['user_id'])) {
     exit();
 }
 
-if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+if (!isset($_SESSION['token'])) {
+    $_SESSION['token'] = bin2hex(random_bytes(32));
 }
+$token = $_SESSION['token'];
 
 // Handle registration BEFORE any output
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $token = $_POST['token'] ?? 0;
 
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-        $error = 'Invalid CSRF token';
+    if (!isset($_SESSION['token']) || $token !== $_SESSION['token']) {
+        $error = 'Invalid request. Please try again.';
     } else {
         $username = htmlspecialchars($_POST['username']);
         $email = htmlspecialchars($_POST['email']);
@@ -62,7 +64,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+    
 }
+
 
 // Include templates AFTER registration processing
 require_once '../../templates/header.php';
@@ -114,6 +118,7 @@ $default_role = isset($_GET['role']) ? $_GET['role'] : 'member';
                                 <option value="company" <?php echo $default_role === 'company' ? 'selected' : ''; ?>>Company</option>
                             </select>
                         </div>
+                        <input type="hidden" name="token" value="<?php echo htmlspecialchars($_SESSION['token'], ENT_QUOTES, 'UTF-8'); ?>">
                         
                         <button type="submit" class="btn btn-primary w-100">Register</button>
                     </form>

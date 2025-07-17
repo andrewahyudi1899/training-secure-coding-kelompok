@@ -16,6 +16,12 @@ if (!isset($_SESSION['login_attempts'])) {
     $_SESSION['start_attempt_time'] = microtime(true);
 }
 
+
+if (!isset($_SESSION['token'])) {
+    $_SESSION['token'] = bin2hex(random_bytes(32));
+}
+$token = $_SESSION['token'];
+
 // Handle login BEFORE any output
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // var_dump($_SESSION['token'],  $_POST['token']);
@@ -51,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $user = $auth->login($username, $password);
                 if ($user) {
                     $_SESSION['user_id'] = $user['id'];
-                    
+                    $_SESSION['login_attempts'] = 0;
                     // Redirect based on role
                     if ($user['role'] === 'member') {
                         header('Location: ../member/dashboard.php');
@@ -74,10 +80,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 }
 
-if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-$csrf_token = $_SESSION['csrf_token'];
 
 // Include templates AFTER login processing
 require_once '../../templates/header.php';
