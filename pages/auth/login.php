@@ -10,8 +10,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = htmlspecialchars($_POST['username']);
     $password = htmlspecialchars($_POST['password']);
 
-    if (!filter_var($username, FILTER_VALIDATE_EMAIL)) {
-        $error = "Invalid email format";
+    // if (!filter_var($username, FILTER_VALIDATE_EMAIL)) {
+    //     $error = "Invalid email format";
+    // }
+    $pattern = "/^[a-zA-Z0-9]+$/";
+    if(!preg_match($pattern, $username)) {
+        $response['message'] = "Username only alphanumeric";
+        return $response;
     }
 
     $auth = new Auth();
