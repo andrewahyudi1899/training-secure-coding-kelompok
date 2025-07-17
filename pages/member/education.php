@@ -19,41 +19,72 @@ if (!$auth->checkAccess('member')) {
 $message = '';
 $error = '';
 
+if (!isset($_SESSION['csrf_token']) || $_SESSION['csrf_token'] == "") {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
+
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $error = 'Invalid CSRF token';
+    } else {
+        $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
+        
+        // Check if user is actually logged in (prevent foreign key constraint violation)
+        if ($user_id <= 0) {
+            $error = 'You must be logged in to perform this action.';
+        } else {
+            // check user access only can edit them self, check by jwt and session
+            $user = $auth->getUserById($user_id);
+            if($user) {
+                $institution = $_POST['institution'];
+                $degree = $_POST['degree'];
+                $field_of_study = $_POST['field_of_study'];
+                $start_date = $_POST['start_date'];
+                $end_date = $_POST['end_date'];
+        
+                require_once '../../config/database.php';
+                $db = new Database();
+                $conn = $db->getConnection();
+        
+                // Use addslashes to prevent SQL crash but still vulnerable to XSS
+                $institution_escaped = htmlspecialchars($institution);
+                $degree_escaped = htmlspecialchars($degree);
+                $field_of_study_escaped = htmlspecialchars($field_of_study);
+                $start_date_escaped = htmlspecialchars($start_date);
+                $end_date_escaped = htmlspecialchars($end_date);
+        
+                // Vulnerable: SQL injection (still possible with addslashes bypass)
+                // $query = "INSERT INTO education (user_id, institution, degree, field_of_study, start_date, end_date)
+                //      VALUES ($user_id, '$institution_escaped', '$degree_escaped', '$field_of_study_escaped', '$start_date_escaped', '$end_date_escaped')";
+        
+                $query = "INSERT INTO education (
+                    user_id, institution, degree, field_of_study, start_date, end_date
+                ) VALUES (
+                    :user_id, :institution, :degree, :field_of_study, :start_date, :end_date
+                )";
+
+                $stmt = $conn->prepare($query);
+                $is_success = $stmt->execute([
+                    'user_id' => $user_id,
+                    'institution' => $institution,
+                    'degree' => $degree,
+                    'field_of_study' => $field_of_study,
+                    'start_date' => $start_date,
+                    'end_date' => $end_date
+                ]);
+
+                if ($is_success) {
+                    $message = 'Education added successfully!';
+                } else {
+                    $error = 'Failed to add education.';
+                }
+            }
     
-    // Check if user is actually logged in (prevent foreign key constraint violation)
-    if ($user_id <= 0) {
-        $error = 'You must be logged in to perform this action.';
-    } else {
-    $institution = $_POST['institution'];
-    $degree = $_POST['degree'];
-    $field_of_study = $_POST['field_of_study'];
-    $start_date = $_POST['start_date'];
-    $end_date = $_POST['end_date'];
-
-    require_once '../../config/database.php';
-    $db = new Database();
-    $conn = $db->getConnection();
-
-    // Use addslashes to prevent SQL crash but still vulnerable to XSS
-    $institution_escaped = addslashes($institution);
-    $degree_escaped = addslashes($degree);
-    $field_of_study_escaped = addslashes($field_of_study);
-    $start_date_escaped = addslashes($start_date);
-    $end_date_escaped = addslashes($end_date);
-
-    // Vulnerable: SQL injection (still possible with addslashes bypass)
-    $query = "INSERT INTO education (user_id, institution, degree, field_of_study, start_date, end_date)
-             VALUES ($user_id, '$institution_escaped', '$degree_escaped', '$field_of_study_escaped', '$start_date_escaped', '$end_date_escaped')";
-
-    if ($conn->query($query)) {
-        $message = 'Education added successfully!';
-    } else {
-        $error = 'Failed to add education.';
+        }
     }
 
-    }}
+}
 
 // Get user education
 require_once '../../config/database.php';
@@ -95,18 +126,18 @@ $education = $conn->query($query);
                 </ul>
             </div>
         </div>
-        
+
         <div class="col-md-9">
             <div class="main-content">
                 <h2>Education</h2>
-                
+
                 <?php if ($message): ?>
                     <div class="alert alert-success"><?php echo $message; ?></div>
                 <?php endif; ?>
                 <?php if ($error): ?>
                     <div class="alert alert-danger"><?php echo $error; ?></div>
                 <?php endif; ?>
-                
+
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5>Add Education</h5>
@@ -127,12 +158,12 @@ $education = $conn->query($query);
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="field_of_study" class="form-label">Field of Study</label>
                                 <input type="text" class="form-control" id="field_of_study" name="field_of_study" required>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
@@ -147,12 +178,13 @@ $education = $conn->query($query);
                                     </div>
                                 </div>
                             </div>
-                            
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
+
                             <button type="submit" class="btn btn-primary">Add Education</button>
                         </form>
                     </div>
                 </div>
-                
+
                 <div class="card">
                     <div class="card-header">
                         <h5>My Education</h5>
@@ -166,13 +198,13 @@ $education = $conn->query($query);
                                             <h6><?php echo $edu['degree']; ?> in <?php echo $edu['field_of_study']; ?></h6>
                                             <p class="mb-1"><strong><?php echo $edu['institution']; ?></strong></p>
                                             <small class="text-muted">
-                                                <?php echo date('M Y', strtotime($edu['start_date'])); ?> - 
+                                                <?php echo date('M Y', strtotime($edu['start_date'])); ?> -
                                                 <?php echo $edu['end_date'] ? date('M Y', strtotime($edu['end_date'])) : 'Present'; ?>
                                             </small>
                                         </div>
                                         <!-- Vulnerable: Direct object reference -->
-                                        <a href="?delete_education=<?php echo $edu['id']; ?>" class="btn btn-sm btn-danger" 
-                                           onclick="return confirm('Delete education?')">Delete</a>
+                                        <a href="?delete_education=<?php echo $edu['id']; ?>" class="btn btn-sm btn-danger"
+                                            onclick="return confirm('Delete education?')">Delete</a>
                                     </div>
                                 </div>
                             <?php endwhile; ?>
