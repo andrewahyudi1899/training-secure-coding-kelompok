@@ -185,6 +185,7 @@ $skills = $conn->query($query);
 <?php
 // Vulnerable: Delete skill without proper authorization
 if (isset($_GET['delete_skill'])) {
+    // ADD DELETE AUTHORIZATION AND
     // FIXING
     $skill_id = addslashes(htmlspecialchars(decrypt($_GET['delete_skill'], $key))); // Prevent SQL crash but still vulnerable
     require_once '../../config/database.php';

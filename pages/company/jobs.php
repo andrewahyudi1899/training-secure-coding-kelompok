@@ -143,7 +143,7 @@ if (isset($_GET['edit'])) {
 
     $stmt = $conn->prepare($query);
     $stmt->bindParam(':editid', $edit_id);
-    $stmt->bindParam(':companyid', $user_id);
+    $stmt->bindParam(':userid', $user_id);
     $stmt->execute();
 
     $result = $stmt->fetchAll();
