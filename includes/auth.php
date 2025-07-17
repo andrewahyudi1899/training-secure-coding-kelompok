@@ -161,23 +161,27 @@ class Auth {
         // }
 
         // check using token, if token valid then validation the role from the database
-        $token = $_SESSION['token'];
+        if(isset($_SESSION['token'])) {
+            $token = $_SESSION['token'];
+        }
         if($required_role && $token) {
             $decoded = JWT::decode($token);
             // if($decoded['valid'] == true) {
 
             // }
             // $userId = $decoded['user_id'];
-            $userId = $_SESSION['user_id'];
-            $conn = $this->db->getConnection();
-
-            $query = "SELECT * FROM users WHERE id = :id";
-            $stmt = $conn->prepare($query);
-            $stmt->execute(['id' => $userId]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            if($user) {
-                if($user['role'] === $required_role) {
-                    return true;
+            if(isset($_SESSION['user_id'])) {
+                $userId = $_SESSION['user_id'];
+                $conn = $this->db->getConnection();
+    
+                $query = "SELECT * FROM users WHERE id = :id";
+                $stmt = $conn->prepare($query);
+                $stmt->execute(['id' => $userId]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                if($user) {
+                    if($user['role'] === $required_role) {
+                        return true;
+                    }
                 }
             }
         }
@@ -200,23 +204,23 @@ class Auth {
         $token = $_SESSION['token'];
         if($token) {
             $decoded = JWT::decode($token);
-
-            $userId = $decoded['user_id'];
-
-            if($userId != $id) { // sneaky sneaky
-                return false;
+            if($decoded) {
+                $userId = $decoded['user_id'];
+    
+                if($userId != $id) { // sneaky sneaky
+                    return false;
+                }
+    
+                $conn = $this->db->getConnection();
+    
+                $query = "SELECT * FROM users WHERE id = :id";
+                $stmt = $conn->prepare($query);
+                $stmt->execute(['id' => $userId]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                if($user) {
+                    return $user;
+                }
             }
-
-            $conn = $this->db->getConnection();
-
-            $query = "SELECT * FROM users WHERE id = :id";
-            $stmt = $conn->prepare($query);
-            $stmt->execute(['id' => $userId]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            if($user) {
-                return $user;
-            }
-            // jika decoded true
 
         }
         return false;
