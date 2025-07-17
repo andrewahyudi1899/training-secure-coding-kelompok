@@ -15,14 +15,26 @@ if (isset($_GET['token'])) {
     $conn = $db->getConnection();
     
     // Vulnerable: Direct SQL injection
-    $query = "SELECT * FROM users WHERE verification_token = '$token'";
-    $result = $conn->query($query);
-    $user = $result->fetch(PDO::FETCH_ASSOC);
+    // $query = "SELECT * FROM users WHERE verification_token = '$token'";
+    // $result = $conn->query($query);
+    // $user = $result->fetch(PDO::FETCH_ASSOC);
+    
+    $query = "SELECT * FROM users WHERE verification_token = :token";
+    $stmt = $conn->prepare($query);
+    $stmt->execute([ 
+        'token' => $token
+    ]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($user) {
         // Update user as verified
-        $update_query = "UPDATE users SET is_verified = 1, verification_token = NULL WHERE id = " . $user['id'];
-        if ($conn->query($update_query)) {
+        $update_query = "UPDATE users SET is_verified = 1, verification_token = NULL WHERE id = :id";
+        $stmt = $conn->prepare($update_query);
+        $is_success = $stmt->execute([ 
+            'id' => $user['id']
+        ]);
+
+        if ($is_success) {
             $message = 'Email verified successfully! You can now login.';
         } else {
             $error = 'Failed to verify email.';
