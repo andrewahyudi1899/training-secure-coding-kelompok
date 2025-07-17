@@ -17,16 +17,17 @@ if (!isset($_SESSION['login_attempts'])) {
 }
 
 
-if (!isset($_SESSION['token'])) {
-    $_SESSION['token'] = bin2hex(random_bytes(32));
+if (!isset($_SESSION['csrf_token']) || $_SESSION['csrf_token'] == "") {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
-$token = $_SESSION['token'];
+$token = $_SESSION['csrf_token'];
 
 // Handle login BEFORE any output
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // var_dump($_SESSION['token'],  $_POST['token']);
-    $token = $_POST['token'] ?? 0;
-    if (!isset($_SESSION['token']) || $token !== $_SESSION['token']) {
+    // var_dump($_SESSION['csrf_token'],  $_POST['csrf_token']);
+    // var_dump($token, $_SESSION['csrf_token']);
+    // $token = $_POST['csrf_token'] ?? 0;
+    if (!isset($_SESSION['csrf_token']) || $token !== $_SESSION['csrf_token']) {
         $error = 'Invalid request. Please try again.';
     } else {
         $current_time = microtime(true);
@@ -108,7 +109,7 @@ require_once '../../templates/nav.php';
                             <label for="password" class="form-label">Password</label>
                             <input type="password" class="form-control" id="password" name="password" required>
                         </div>
-                        <input type="hidden" name="token" value="<?php echo htmlspecialchars($_SESSION['token'], ENT_QUOTES, 'UTF-8'); ?>">
+                        <input type="hidden" name="token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
 
                         <button type="submit" class="btn btn-primary w-100">Login</button>
                     </form>
