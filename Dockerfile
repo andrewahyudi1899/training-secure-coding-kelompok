@@ -31,6 +31,6 @@ RUN chown -R www-data:www-data /var/www/html \
 # Create upload directory
 RUN mkdir -p /var/www/html/uploads/profiles \
     && mkdir -p /var/www/html/uploads/cvs \
-    && chmod -R 777 /var/www/html/uploads
+    && chmod -R 644 /var/www/html/uploads
 
 EXPOSE 80

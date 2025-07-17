@@ -7,11 +7,16 @@ $error = '';
 
 // Handle login BEFORE any output
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'];
-    $password = $_POST['password'];
+    $username = htmlspecialchars($_POST['username']);
+    $password = htmlspecialchars($_POST['password']);
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "Invalid email format";
+    }
 
     $auth = new Auth();
     $user = $auth->login($username, $password);
+    
 
     if ($user) {
         $_SESSION['user_id'] = $user['id'];
