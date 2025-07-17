@@ -13,35 +13,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
     $role = $_POST['role'];
-    
-    // Vulnerable: No input validation
-    // Vulnerable: No password confirmation check
-    // Vulnerable: No password complexity requirements
-    
-    $auth = new Auth();
-    
-    // Store password in plain text - major vulnerability
-    $register = $auth->register($username, $email, $password, $role);
-    $status = $register['status'];
-    $responseMessage = $register['message'];
-    if ($status == true) {
-        // Send verification email after successful registration
-        require_once '../../includes/email.php';
-        $emailService = new EmailService();
-        $verification_token = bin2hex(random_bytes(32));
 
-        // Send registration email
-        $emailSent = $emailService->sendRegistrationEmail($email, $username, $verification_token);
-
-        if ($emailSent) {
-            $message = 'Registration successful! Please check your email to verify your account.';
-        } else {
-            $message = 'Registration successful! However, there was an issue sending the verification email. Please contact support.';
-        }
+    if($password !== $confirm_password) {
+        $error = "Passwords do not match!";
+        // return;
     } else {
-        $error = 'Registration failed. Please try again.';
-        $error = $responseMessage;
+        // Vulnerable: No input validation
+        // Vulnerable: No password confirmation check
+        // Vulnerable: No password complexity requirements
+        // cek langsung dari Auth - aja buat validasi global
+        $auth = new Auth();
+        
+        // Store password in plain text - major vulnerability
+        $register = $auth->register($username, $email, $password, $role);
+        $status = $register['status'];
+        $responseMessage = $register['message'];
+        if ($status == true) {
+            // Send verification email after successful registration
+            require_once '../../includes/email.php';
+            $emailService = new EmailService();
+            $verification_token = bin2hex(random_bytes(32));
+    
+            // Send registration email
+            $emailSent = $emailService->sendRegistrationEmail($email, $username, $verification_token);
+    
+            if ($emailSent) {
+                $message = 'Registration successful! Please check your email to verify your account.';
+            } else {
+                $message = 'Registration successful! However, there was an issue sending the verification email. Please contact support.';
+            }
+        } else {
+            $error = 'Registration failed. Please try again.';
+            $error = $responseMessage;
+        }
     }
+    
 }
 
 // Include templates AFTER registration processing
@@ -111,10 +117,12 @@ $default_role = isset($_GET['role']) ? $_GET['role'] : 'member';
 <script>
     document.getElementById('username').addEventListener('input', function(e) {
         // Vulnerable: Direct innerHTML assignment
-        document.getElementById('username-feedback').innerHTML = 'Username: ' + e.target.value;
+        // ERROR CODE : XSS-001 - USE textContent for more saferrrrrrrrrrrrrrrrrr because parse the input to stirng not HTML like innterHTML
+        document.getElementById('username-feedback').textContent = 'Username: ' + e.target.value;
     });
     
     // Vulnerable: Client-side only validation
+    // ERROR CODE : IV-004
     document.querySelector('form').addEventListener('submit', function(e) {
         var password = document.getElementById('password').value;
         var confirmPassword = document.getElementById('confirm_password').value;
