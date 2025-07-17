@@ -43,7 +43,7 @@ class JWT {
     }
     
     // Expose secret in client-side
-    public static function getSecret() {
+    private static function getSecret() {
         return self::$secret;
     }
 }
