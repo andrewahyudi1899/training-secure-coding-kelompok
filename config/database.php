@@ -32,10 +32,15 @@ class Database
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch (PDOException $exception) {
             // Expose sensitive error information
-            echo "Connection error: " . $exception->getMessage();
-            echo "<br>Host: " . $this->host;
-            echo "<br>Database: " . $this->db_name;
-            echo "<br>Username: " . $this->username;
+            // ob_start();
+            error_log("Connection error: " . $exception->getMessage());
+            // header("Location: ".BASE_URL.'/error_code/503.php', true, 503);
+            // ob_end_flush();
+            exit;
+            // echo "Connection error: " . $exception->getMessage();
+            // echo "<br>Host: " . $this->host;
+            // echo "<br>Database: " . $this->db_name;
+            // echo "<br>Username: " . $this->username;
         }
         return $this->conn;
     }

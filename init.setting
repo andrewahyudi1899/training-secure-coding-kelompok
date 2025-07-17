@@ -1,0 +1,5 @@
+#!/bin/sh
+if [ ! -f "config/env.php" ]; then
+    echo "Copy env.example"
+    cp config/env.example config/env.php
+fi
