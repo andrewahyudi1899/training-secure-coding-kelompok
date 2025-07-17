@@ -37,8 +37,8 @@ class JWT {
             return false;
         }
 
-        // check for expirty
-        if (time() > $decodedPayload['exp']) {
+        // check for expiry
+        if (isset($payload['exp']) && time() > $decodedPayload['exp']) {
             return false;
         }
 

@@ -9,6 +9,11 @@ class Auth {
     public function __construct() {
         $this->db = new Database();
     }
+
+    function success_log($message) {
+        $logMessage = "Login [" . date('Y-m-d H:i:s') . "] SUCCESS: $message" . PHP_EOL;
+        file_put_contents('logs/success.log', $logMessage, FILE_APPEND);
+    }
     
     // Vulnerable login - SQL injection
     public function login($username, $password) {
@@ -51,9 +56,12 @@ class Auth {
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['role'] = $user['role'];
                 $_SESSION['token'] = $token;
+                self::success_log("User {$user['username']} successfully logged in");
                 
                 return $user;
             }
+        } else {
+            error_log("Login : User $user try to login");
         }
         
         return false;
@@ -166,21 +174,19 @@ class Auth {
         }
         if($required_role && $token) {
             $decoded = JWT::decode($token);
-            // if($decoded['valid'] == true) {
-
-            // }
-            // $userId = $decoded['user_id'];
-            if(isset($_SESSION['user_id'])) {
-                $userId = $_SESSION['user_id'];
-                $conn = $this->db->getConnection();
-    
-                $query = "SELECT * FROM users WHERE id = :id";
-                $stmt = $conn->prepare($query);
-                $stmt->execute(['id' => $userId]);
-                $user = $stmt->fetch(PDO::FETCH_ASSOC);
-                if($user) {
-                    if($user['role'] === $required_role) {
-                        return true;
+            if($decoded) {
+                if(isset($_SESSION['user_id'])) {
+                    $userId = $_SESSION['user_id'];
+                    $conn = $this->db->getConnection();
+        
+                    $query = "SELECT * FROM users WHERE id = :id";
+                    $stmt = $conn->prepare($query);
+                    $stmt->execute(['id' => $userId]);
+                    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if($user) {
+                        if($user['role'] === $required_role) {
+                            return true;
+                        }
                     }
                 }
             }
@@ -201,7 +207,10 @@ class Auth {
         // ERROR CODE : 
 
         // check for user token, only user that already login can check them self
-        $token = $_SESSION['token'];
+        $token = false;
+        if(isset($_SESSION['token'])) {
+            $token = $_SESSION['token'];
+        }
         if($token) {
             $decoded = JWT::decode($token);
             if($decoded) {
