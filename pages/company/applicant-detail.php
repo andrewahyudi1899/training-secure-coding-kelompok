@@ -17,6 +17,8 @@ if (!$auth->checkAccess('company')) {
 }
 
 $application_id = $_GET['id'] ?? 0; // Vulnerable to SQL injection
+// tambahan untuk parse INT
+$application_id = (int)$_GET['id'];
 
 require_once '../../config/database.php';
 $db = new Database();
@@ -54,12 +56,21 @@ if (!$application) {
 }
 
 // Get applicant skills
-$skills_query = "SELECT * FROM skills WHERE user_id = " . $application['user_id'];
-$skills = $conn->query($skills_query);
+// ----before----
+// $skills_query = "SELECT * FROM skills WHERE user_id = ".$application['user_id'];
+// ----after----
+$skills_query = "SELECT * FROM skills WHERE user_id = ?";
+$skills = $conn->prepare($skills_query);
+$skills->execute([$application['user_id']]);
+
 
 // Get applicant education
-$education_query = "SELECT * FROM education WHERE user_id = " . $application['user_id'] . " ORDER BY start_date DESC";
-$education = $conn->query($education_query);
+// ----before----
+// $education_query = "SELECT * FROM education WHERE user_id = " . $application['user_id'] . " ORDER BY start_date DESC";
+// ----after----
+$education_query = "SELECT * FROM education WHERE user_id = ? ORDER BY start_date DESC";
+$education = $conn->prepare($education_query);
+$education->execute([$application['user_id']]);
 ?>
 
 <div class="container-fluid">
@@ -129,7 +140,10 @@ $education = $conn->query($education_query);
                                 <h5>Cover Letter</h5>
                                 <!-- Vulnerable: XSS -->
                                 <div class="border p-3 rounded bg-light mb-4">
-                                    <?php echo nl2br($application['cover_letter']); ?>
+                                    <!-- before -->
+                                    <!-- <?php // echo nl2br($application['cover_letter']); ?> -->
+                                     <!-- after -->
+                                    <?php echo nl2br(htmlspecialchars($application['cover_letter'])); ?>
                                 </div>
                                 
                                 <?php if ($application['address']): ?>

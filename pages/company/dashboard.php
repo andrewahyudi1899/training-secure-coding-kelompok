@@ -23,14 +23,25 @@ $conn = $db->getConnection();
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
 
 // Get company stats
-$query = "SELECT COUNT(*) as total_jobs FROM jobs WHERE company_id = $user_id";
-$result = $conn->query($query);
+// -- before SQL Injection
+// $query = "SELECT COUNT(*) as total_jobs FROM jobs WHERE company_id = $user_id";
+// -- after SQL Injection
+$query = "SELECT COUNT(*) as total_jobs FROM jobs WHERE company_id = ?";
+$result = $conn->prepare($query);
+$result->execute([$user_id]);
 $total_jobs = $result->fetch(PDO::FETCH_ASSOC)['total_jobs'];
 
+// -- before SQL Injection
+// $query = "SELECT COUNT(*) as total_applications FROM job_applications ja
+//           JOIN jobs j ON ja.job_id = j.id
+//           WHERE j.company_id = $user_id";
+// $result = $conn->query($query);
+// -- after SQL Injection
 $query = "SELECT COUNT(*) as total_applications FROM job_applications ja
           JOIN jobs j ON ja.job_id = j.id
-          WHERE j.company_id = $user_id";
-$result = $conn->query($query);
+          WHERE j.company_id = ?";
+$result = $conn->prepare($query);
+$result->execute([$user_id]);
 $total_applications = $result->fetch(PDO::FETCH_ASSOC)['total_applications'];
 ?>
 

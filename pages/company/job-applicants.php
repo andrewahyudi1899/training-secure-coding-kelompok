@@ -24,10 +24,13 @@ $conn = $db->getConnection();
 
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
 
-// Get job details
-$job_query = "SELECT * FROM jobs WHERE id = $job_id AND company_id = $user_id";
-$job_result = $conn->query($job_query);
-$job = $job_result->fetch(PDO::FETCH_ASSOC);
+// Get job details using prepared statement to prevent SQL injection
+$job_query = "SELECT * FROM jobs WHERE id = :job_id AND company_id = :company_id";
+$job_stmt = $conn->prepare($job_query);
+$job_stmt->bindParam(':job_id', $job_id, PDO::PARAM_INT);
+$job_stmt->bindParam(':company_id', $user_id, PDO::PARAM_INT);
+$job_stmt->execute();
+$job = $job_stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$job) {
     header('Location: jobs.php');
