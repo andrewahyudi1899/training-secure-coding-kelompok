@@ -23,18 +23,30 @@ require_once '../../config/database.php';
 $db = new Database();
 $conn = $db->getConnection();
 
-$user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
-
+$user_id = isset($_SESSION['user_id']) ? htmlspecialchars($_SESSION['user_id']) : 0;
+// ----before----
 // Vulnerable: No proper authorization check
+// $query = "SELECT ja.*, j.title as job_title, j.description as job_description,
+//                  u.username, u.email, mp.full_name, mp.phone, mp.address, mp.profile_photo, mp.cv_file
+//          FROM job_applications ja
+//          JOIN jobs j ON ja.job_id = j.id
+//          JOIN users u ON ja.user_id = u.id
+//          LEFT JOIN member_profiles mp ON u.id = mp.user_id
+//          WHERE ja.id = ?";
+
+// $result = $conn->prepare($query);
+// $result->execute([$application_id]);
+// ----after----
 $query = "SELECT ja.*, j.title as job_title, j.description as job_description,
                  u.username, u.email, mp.full_name, mp.phone, mp.address, mp.profile_photo, mp.cv_file
          FROM job_applications ja
          JOIN jobs j ON ja.job_id = j.id
          JOIN users u ON ja.user_id = u.id
          LEFT JOIN member_profiles mp ON u.id = mp.user_id
-         WHERE ja.id = $application_id";
+         WHERE ja.id = ?";
 
-$result = $conn->query($query);
+$result = $conn->prepare($query);
+$result->execute([$application_id]);
 $application = $result->fetch(PDO::FETCH_ASSOC);
 
 if (!$application) {
