@@ -16,53 +16,61 @@ if (!isset($_SESSION['login_attempts'])) {
     $_SESSION['start_attempt_time'] = microtime(true);
 }
 
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // Handle login BEFORE any output
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $current_time = microtime(true);
-    $username = htmlspecialchars($_POST['username']);
-    $password = htmlspecialchars($_POST['password']);
-
-    if ($_SESSION['login_attempts'] >= $max_attempts && ($current_time - $_SESSION['start_attempt_time']) < $lockout_time) {
-        $remaining = (int)($lockout_time - ($current_time - $_SESSION['start_attempt_time']));
-        $error = "Too many login attempts. Try again in $remaining seconds.";
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $error = 'Invalid CSRF token';
     } else {
-
-        if (($current_time - $_SESSION['start_attempt_time']) >= $lockout_time) {
-            $_SESSION['login_attempts'] = 0;
-            $_SESSION['start_attempt_time'] = microtime(true);
-        }
-
-        // if (!filter_var($username, FILTER_VALIDATE_EMAIL)) {
-        //     $error = "Invalid email format";
-        // }
-        $pattern = "/^[a-zA-Z0-9]+$/";
-        if(!preg_match($pattern, $username)) {
-            // $response['message'] = "Username only alphanumeric";
-            // return $response;
-            $error = 'Username only alphanumeric';
-        } else {
-            $auth = new Auth();
-            $_SESSION['login_attempts'] = $attempts + 1;
-            $user = $auth->login($username, $password);
-            if ($user) {
-                $_SESSION['user_id'] = $user['id'];
-                
-                // Redirect based on role
-                if ($user['role'] === 'member') {
-                    header('Location: ../member/dashboard.php');
-                } else {
-                    header('Location: ../company/dashboard.php');
-                }
-                $is_login = true;
-                exit;
-            } else {
-                $_SESSION['last_attempt_time'] = $current_time;
-                $error = "Invalid credentials. Attempt #" . (int)$_SESSION['login_attempts'];
-                // $error = 'Invalid username or password';
-            }
-
-        }
+        $current_time = microtime(true);
+        $username = htmlspecialchars($_POST['username']);
+        $password = htmlspecialchars($_POST['password']);
     
+        if ($_SESSION['login_attempts'] >= $max_attempts && ($current_time - $_SESSION['start_attempt_time']) < $lockout_time) {
+            $remaining = (int)($lockout_time - ($current_time - $_SESSION['start_attempt_time']));
+            $error = "Too many login attempts. Try again in $remaining seconds.";
+        } else {
+    
+            if (($current_time - $_SESSION['start_attempt_time']) >= $lockout_time) {
+                $_SESSION['login_attempts'] = 0;
+                $_SESSION['start_attempt_time'] = microtime(true);
+            }
+    
+            // if (!filter_var($username, FILTER_VALIDATE_EMAIL)) {
+            //     $error = "Invalid email format";
+            // }
+            $pattern = "/^[a-zA-Z0-9]+$/";
+            if(!preg_match($pattern, $username)) {
+                // $response['message'] = "Username only alphanumeric";
+                // return $response;
+                $error = 'Username only alphanumeric';
+            } else {
+                $auth = new Auth();
+                $_SESSION['login_attempts'] = $attempts + 1;
+                $user = $auth->login($username, $password);
+                if ($user) {
+                    $_SESSION['user_id'] = $user['id'];
+                    
+                    // Redirect based on role
+                    if ($user['role'] === 'member') {
+                        header('Location: ../member/dashboard.php');
+                    } else {
+                        header('Location: ../company/dashboard.php');
+                    }
+                    $is_login = true;
+                    exit;
+                } else {
+                    $_SESSION['last_attempt_time'] = $current_time;
+                    $error = "Invalid credentials. Attempt #" . (int)$_SESSION['login_attempts'];
+                    // $error = 'Invalid username or password';
+                }
+    
+            }
+        
+        }
     }
 
 
