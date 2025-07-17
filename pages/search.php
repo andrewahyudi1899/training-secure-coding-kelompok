@@ -16,11 +16,12 @@ $search_query_escaped = htmlspecialchars($search_query);
 // Vulnerable: SQL injection (still possible with addslashes bypass)
 $query = "SELECT j.*, c.company_name FROM jobs j
          JOIN company_profiles c ON j.company_id = c.user_id
-         WHERE j.status = 'active' AND (j.title LIKE '%:search_query_escaped%' OR j.description LIKE '%:search_query_escaped%')
+         WHERE j.status = 'active' AND (j.title LIKE ? OR j.description LIKE ?)
          ORDER BY j.created_at DESC";
 
-$jobs = $conn->query($query);
-$jobs->bindParam('search_query_escaped', $search_query_escaped);
+$jobs = $conn->prepare($query);
+$jobs->execute(["%$search_query_escaped%", "%$search_query_escaped%"]);
+// $jobs->bindParam('search_query_escaped', '%'.$search_query_escaped.'%');
 // $jobs->execute()
 ?>
 

@@ -63,16 +63,15 @@ require_once 'templates/nav.php';
                 $db = new Database();
                 $conn = $db->getConnection();
                 
-                $search = isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '';
+                $search = isset($_GET['search']) ? $_GET['search'] : '';
                 $query = "SELECT j.*, c.company_name FROM jobs j 
                          JOIN company_profiles c ON j.company_id = c.user_id 
-                         WHERE j.status = 'active' AND (j.title LIKE '%:search%' OR j.description LIKE '%:search%')
+                         WHERE j.status = 'active' AND (j.title LIKE ? OR j.description LIKE ?)
                          ORDER BY j.created_at DESC LIMIT 5";
                 
                 $result = $conn->prepare($query);
-                $result->bindParam('search', $search);
-                $result->execute();
-                
+                $result->execute(["%$search%", "%$search%"]);
+
                 if ($result->rowCount() > 0) {
                     while ($job = $result->fetch(PDO::FETCH_ASSOC)) {
                         echo '<div class="card mb-3">';
