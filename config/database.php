@@ -46,15 +46,15 @@ class Database
     }
 
     // Direct query execution without sanitization
-    public function executeQuery($query)
-    {
-        $result = $this->conn->query($query);
-        return $result;
-    }
+    // public function executeQuery($query)
+    // {
+    //     $result = $this->conn->query($query);
+    //     return $result;
+    // }
 
     // Vulnerable query method
-    public function vulnerableQuery($query)
-    {
-        return mysqli_query($this->getConnection(), $query);
-    }
+    // public function vulnerableQuery($query)
+    // {
+    //     return mysqli_query($this->getConnection(), $query);
+    // }
 }

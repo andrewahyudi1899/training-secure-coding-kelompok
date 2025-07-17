@@ -17,26 +17,23 @@ if (!$auth->checkAccess('member')) {
     exit;
 }
 
-$job_id = $_GET['id'] ?? 0; // Vulnerable to SQL injection
-$search = $_GET['search'] ?? ''; // Vulnerable search parameter
+$job_id = isset($_GET['id']) && is_numeric($_GET['id']) ? intval($_GET['id']) : 0;
+// $search = $_GET['search'] ?? ''; // Vulnerable search parameter
 
 require_once '../../config/database.php';
 $db = new Database();
 $conn = $db->getConnection();
 
-// Vulnerable: SQL injection through search parameter
+// Secure: Use prepared statement to prevent SQL injection
 $query = "SELECT j.*, c.company_name, c.description as company_description, c.website
          FROM jobs j
          LEFT JOIN company_profiles c ON j.company_id = c.user_id
-         WHERE j.id = $job_id";
+         WHERE j.id = :job_id";
 
-// Add vulnerable search condition if search parameter exists
-if (!empty($search)) {
-    $query .= " AND (j.title LIKE '%$search%' OR j.description LIKE '%$search%')";
-}
-
-$result = $conn->query($query);
-$job = $result->fetch(PDO::FETCH_ASSOC);
+$stmt = $conn->prepare($query);
+$stmt->bindParam(':job_id', $job_id, PDO::PARAM_INT);
+$stmt->execute();
+$job = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$job) {
     header('Location: jobs.php');
@@ -44,10 +41,13 @@ if (!$job) {
 }
 
 // Check if user already applied
-$user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0; // Vulnerable to SQL injection
-$check_query = "SELECT * FROM job_applications WHERE job_id = $job_id AND user_id = $user_id";
-$check_result = $conn->query($check_query);
-$already_applied = $check_result->rowCount() > 0;
+$user_id = isset($_SESSION['user_id']) && is_numeric($_SESSION['user_id']) ? intval($_SESSION['user_id']) : 0;
+$check_query = "SELECT * FROM job_applications WHERE job_id = :job_id AND user_id = :user_id";
+$check_stmt = $conn->prepare($check_query);
+$check_stmt->bindParam(':job_id', $job_id, PDO::PARAM_INT);
+$check_stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
+$check_stmt->execute();
+$already_applied = $check_stmt->rowCount() > 0;
 ?>
 
 <div class="container-fluid">
@@ -115,15 +115,15 @@ $already_applied = $check_result->rowCount() > 0;
                                 
                                 <h4>Job Description</h4>
                                 <!-- Vulnerable: XSS -->
-                                <div class="mb-4"><?php echo $job['description']; ?></div>
+                                <div class="mb-4"><?php echo htmlspecialchars($job['description']); ?></div>
                                 
                                 <h4>Requirements</h4>
                                 <!-- Vulnerable: XSS -->
-                                <div class="mb-4"><?php echo $job['requirements']; ?></div>
+                                <div class="mb-4"><?php echo htmlspecialchars($job['requirements']); ?></div>
                                 
                                 <h4>About Company</h4>
                                 <!-- Vulnerable: XSS -->
-                                <p><?php echo $job['company_description']; ?></p>
+                                <p><?php echo htmlspecialchars($job['company_description']); ?></p>
                                 
                                 <?php if ($job['website']): ?>
                                     <p><strong>Website:</strong> 
