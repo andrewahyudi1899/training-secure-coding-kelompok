@@ -6,6 +6,12 @@ require_once '../../includes/auth.php';
 $message = '';
 $error = '';
 
+if (isset($_SESSION['user_id'])) {
+    // Redirect to home if already logged in
+    header('Location: ' . BASE_URL . '/index.php');
+    exit();
+}
+
 // Handle registration BEFORE any output
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'];
