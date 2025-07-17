@@ -86,13 +86,19 @@ $profile = $result->fetch(PDO::FETCH_ASSOC);
                         <a class="nav-link" href="dashboard.php">Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="profile.php">Profile</a>
+                        <a class="nav-link" href="profile.php">Profile</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="cv.php">CV</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="jobs.php">Jobs</a>
+                        <a class="nav-link" href="skills.php">Skills</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="education.php">Education</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="jobs.php">Jobs</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="history.php">History</a>
