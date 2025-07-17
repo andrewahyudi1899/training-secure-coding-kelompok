@@ -27,11 +27,18 @@ class JWT {
         }
 
         list($base64Header, $base64Payload, $base64Signature) = $parts;
-
+        $decodedPayload = json_decode(base64_decode(strtr($base64Payload, '-_', '+/')), true);
+        // var_dump($decodedPayload);
+        
+        // check the signature
         $signatureCheck = hash_hmac('sha256', "$base64Header.$base64Payload", self::$secret, true);
         $expectedSignature = self::base64UrlEncode($signatureCheck);
-
         if (!hash_equals($expectedSignature, $base64Signature)) {
+            return false;
+        }
+
+        // check for expirty
+        if (time() > $decodedPayload['exp']) {
             return false;
         }
 
