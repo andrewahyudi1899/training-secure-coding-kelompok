@@ -15,8 +15,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // }
     $pattern = "/^[a-zA-Z0-9]+$/";
     if(!preg_match($pattern, $username)) {
-        $response['message'] = "Username only alphanumeric";
-        return $response;
+        // $response['message'] = "Username only alphanumeric";
+        // return $response;
+        $error = 'Username only alphanumeric';
     }
 
     $auth = new Auth();
