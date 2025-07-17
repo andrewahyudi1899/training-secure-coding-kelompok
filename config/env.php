@@ -1,11 +1,11 @@
 <?php
 // Database configuration - exposed credentials
-#define('DB_HOST', $_ENV['DB_HOST'] ?? 'localhost');
-define('DB_HOST', $_ENV['DB_HOST'] ?? 'job_seeker_polytron');
+//define('DB_HOST', $_ENV['DB_HOST'] ?? 'localhost');
+define('DB_HOST', $_ENV['DB_HOST'] ?? 'localhost');
 define('DB_PORT', $_ENV['DB_PORT'] ?? '3306');
-define('DB_NAME', $_ENV['DB_NAME'] ?? 'db_job_seeker_polytron');
+define('DB_NAME', $_ENV['DB_NAME'] ?? 'job_seeker_polytron');
 define('DB_USER', $_ENV['DB_USER'] ?? 'root');
-define('DB_PASS', $_ENV['DB_PASS'] ?? 'root');
+define('DB_PASS', $_ENV['DB_PASS'] ?? '');
 
 // JWT Secret - weak secret exposed in client-side
 define('JWT_SECRET', 'weak_secret_key_123');
@@ -22,7 +22,7 @@ define('UPLOAD_ALLOWED_TYPES', ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx
 define('UPLOAD_PATH', 'uploads/');
 
 // Base URL
-define('BASE_URL', 'http://localhost:8004');
+define('BASE_URL', 'http://localhost/training-secure-coding-kelompok');
 
 // Session configuration moved to includes/session.php
 ?>
