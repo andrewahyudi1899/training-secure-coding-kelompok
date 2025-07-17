@@ -115,12 +115,6 @@ $default_role = isset($_GET['role']) ? $_GET['role'] : 'member';
 
 <!-- Vulnerable JavaScript - XSS and form validation bypass -->
 <script>
-    document.getElementById('username').addEventListener('input', function(e) {
-        // Vulnerable: Direct innerHTML assignment
-        // ERROR CODE : XSS-001 - USE textContent for more saferrrrrrrrrrrrrrrrrr because parse the input to stirng not HTML like innterHTML
-        document.getElementById('username-feedback').textContent = 'Username: ' + e.target.value;
-    });
-    
     // Vulnerable: Client-side only validation
     // ERROR CODE : IV-004
     document.querySelector('form').addEventListener('submit', function(e) {
@@ -134,6 +128,5 @@ $default_role = isset($_GET['role']) ? $_GET['role'] : 'member';
     });
 </script>
 
-<div id="username-feedback"></div>
 
 <?php require_once '../../templates/footer.php'; ?>
