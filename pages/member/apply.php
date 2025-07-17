@@ -4,7 +4,6 @@ require_once '../../config/env.php';
 require_once '../../includes/auth.php';
 require_once '../../templates/header.php';
 require_once '../../templates/nav.php';
-// include '../../templates/validate_company.php';
 
 $auth = new Auth();
 if (!$auth->checkAccess('member')) {
@@ -17,7 +16,7 @@ if (!$auth->checkAccess('member')) {
     exit;
 }
 
-$job_id = $_GET['job_id'] ?? 0; // Vulnerable to SQL injection
+$job_id = isset($_GET['job_id']) ? (int)$_GET['job_id'] : 0; // Secure: cast to integer
 $message = '';
 $error = '';
 
@@ -53,18 +52,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'You must be logged in to apply for jobs.';
     } else {
         $cover_letter = $_POST['cover_letter'];
-
-        // Use addslashes to prevent SQL crash but still vulnerable to XSS
-        $cover_letter_escaped = addslashes($cover_letter);
-
-        // Vulnerable: SQL injection (still possible with addslashes bypass)
-        $query = "INSERT INTO job_applications (job_id, user_id, cover_letter)
-                 VALUES ($job_id, $user_id, '$cover_letter_escaped')";
-
-        if ($conn->query($query)) {
-            $message = 'Application submitted successfully!';
+        $token = $_POST['token'];
+        // Validate CSRF token
+        if (!isset($_SESSION['token']) || $token !== $_SESSION['token']) {
+            $error = 'Invalid request. Please try again.';
         } else {
+            // Use prepared statements to prevent SQL injection
+            $stmt = $conn->prepare("INSERT INTO job_applications (job_id, user_id, cover_letter) VALUES (:job_id, :user_id, :cover_letter)");
+            $result = $stmt->execute([
+            ':job_id' => $job_id,
+            ':user_id' => $user_id,
+            ':cover_letter' => $cover_letter
+            ]);
+
+            if ($result) {
+            $message = 'Application submitted successfully!';
+            } else {
             $error = 'Failed to submit application.';
+            }
         }
     }
 }
@@ -139,6 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <textarea class="form-control" id="cover_letter" name="cover_letter" rows="8" 
                                                       placeholder="Write your cover letter here..." required></textarea>
                                         </div>
+                                        <input type="hidden" name="token" value="<?php echo htmlspecialchars($_SESSION['token'], ENT_QUOTES, 'UTF-8'); ?>">
                                         
                                         <div class="d-flex gap-2">
                                             <button type="submit" class="btn btn-success">Submit Application</button>

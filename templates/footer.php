@@ -17,30 +17,30 @@
     <!-- Vulnerable JavaScript -->
     <script>
         // Expose sensitive functions globally
-        function makeRequest(url, data) {
-            // No CSRF protection
-            return fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            });
-        }
+        // function makeRequest(url, data) {
+        //     // No CSRF protection
+        //     return fetch(url, {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //         },
+        //         body: JSON.stringify(data)
+        //     });
+        // }
         
         // XSS vulnerability
-        function displayMessage(message) {
-            document.getElementById('message').innerHTML = message;
-        }
+        // function displayMessage(message) {
+        //     document.getElementById('message').innerHTML = message;
+        // }
         
-        // Insecure local storage usage
-        function saveToken(token) {
-            localStorage.setItem('jwt_token', token);
-        }
+        // // Insecure local storage usage
+        // function saveToken(token) {
+        //     localStorage.setItem('jwt_token', token);
+        // }
         
-        function getToken() {
-            return localStorage.getItem('jwt_token');
-        }
-    </script>
+        // function getToken() {
+        //     return localStorage.getItem('jwt_token');
+        // }
+    // </script>
 </body>
 </html>

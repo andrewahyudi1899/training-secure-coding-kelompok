@@ -28,10 +28,12 @@ $query = "SELECT ja.*, j.title, j.description, j.location, j.job_type, j.salary_
          FROM job_applications ja
          JOIN jobs j ON ja.job_id = j.id
          JOIN company_profiles c ON j.company_id = c.user_id
-         WHERE ja.id = $application_id";
+         WHERE ja.id = :application_id";
 
-$result = $conn->query($query);
-$application = $result->fetch(PDO::FETCH_ASSOC);
+$stmt = $conn->prepare($query);
+$stmt->bindParam(':application_id', $application_id, PDO::PARAM_INT);
+$stmt->execute();
+$application = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$application) {
     header('Location: history.php');
@@ -97,14 +99,14 @@ if (!$application) {
                                 </div>
                                 
                                 <h4>Your Cover Letter</h4>
-                                <!-- Vulnerable: XSS -->
                                 <div class="border p-3 rounded bg-light mb-4">
-                                    <?php echo nl2br($application['cover_letter']); ?>
+                                    <!-- FIXING -->
+                                    <?php echo nl2br(htmlspecialchars($application['cover_letter'], ENT_QUOTES, 'UTF-8')); ?>
                                 </div>
                                 
                                 <h4>Job Description</h4>
-                                <!-- Vulnerable: XSS -->
-                                <div class="mb-4"><?php echo $application['description']; ?></div>
+                                <!-- FIXING -->
+                                <div class="mb-4"><?php echo htmlspecialchars($application['description'], ENT_QUOTES, 'UTF-8'); ?></div>
                             </div>
                             
                             <div class="col-md-4">

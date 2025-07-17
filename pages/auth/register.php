@@ -6,49 +6,67 @@ require_once '../../includes/auth.php';
 $message = '';
 $error = '';
 
+if (isset($_SESSION['user_id'])) {
+    // Redirect to home if already logged in
+    header('Location: ' . BASE_URL . '/index.php');
+    exit();
+}
+
+if (!isset($_SESSION['token'])) {
+    $_SESSION['token'] = bin2hex(random_bytes(32));
+}
+$token = $_SESSION['token'];
+
 // Handle registration BEFORE any output
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'];
-    $email = $_POST['email'];
-    $password = $_POST['password'];
-    $confirm_password = $_POST['confirm_password'];
-    $role = $_POST['role'];
+    $token = $_POST['token'] ?? 0;
 
-    if($password !== $confirm_password) {
-        $error = "Passwords do not match!";
-        // return;
+    if (!isset($_SESSION['token']) || $token !== $_SESSION['token']) {
+        $error = 'Invalid request. Please try again.';
     } else {
-        // Vulnerable: No input validation
-        // Vulnerable: No password confirmation check
-        // Vulnerable: No password complexity requirements
-        // cek langsung dari Auth - aja buat validasi global
-        $auth = new Auth();
-        
-        // Store password in plain text - major vulnerability
-        $register = $auth->register($username, $email, $password, $role);
-        $status = $register['status'];
-        $responseMessage = $register['message'];
-        if ($status == true) {
-            // Send verification email after successful registration
-            require_once '../../includes/email.php';
-            $emailService = new EmailService();
-            $verification_token = bin2hex(random_bytes(32));
-    
-            // Send registration email
-            $emailSent = $emailService->sendRegistrationEmail($email, $username, $verification_token);
-    
-            if ($emailSent) {
-                $message = 'Registration successful! Please check your email to verify your account.';
-            } else {
-                $message = 'Registration successful! However, there was an issue sending the verification email. Please contact support.';
-            }
+        $username = htmlspecialchars($_POST['username']);
+        $email = htmlspecialchars($_POST['email']);
+        $password = htmlspecialchars($_POST['password']);
+        $confirm_password = htmlspecialchars($_POST['confirm_password']);
+        $role = htmlspecialchars($_POST['role']);
+
+        if($password !== $confirm_password) {
+            $error = "Passwords do not match!";
+            // return;
         } else {
-            $error = 'Registration failed. Please try again.';
-            $error = $responseMessage;
+            // Vulnerable: No input validation
+            // Vulnerable: No password confirmation check
+            // Vulnerable: No password complexity requirements
+            // cek langsung dari Auth - aja buat validasi global
+            $auth = new Auth();
+            
+            // Store password in plain text - major vulnerability
+            $register = $auth->register($username, $email, $password, $role);
+            $status = $register['status'];
+            $responseMessage = $register['message'];
+            if ($status == true) {
+                // Send verification email after successful registration
+                require_once '../../includes/email.php';
+                $emailService = new EmailService();
+                $verification_token = bin2hex(random_bytes(32));
+        
+                // Send registration email
+                $emailSent = $emailService->sendRegistrationEmail($email, $username, $verification_token);
+        
+                if ($emailSent) {
+                    $message = 'Registration successful! Please check your email to verify your account.';
+                } else {
+                    $message = 'Registration successful! However, there was an issue sending the verification email. Please contact support.';
+                }
+            } else {
+                $error = 'Registration failed. Please try again.';
+                $error = $responseMessage;
+            }
         }
     }
     
 }
+
 
 // Include templates AFTER registration processing
 require_once '../../templates/header.php';
@@ -100,6 +118,7 @@ $default_role = isset($_GET['role']) ? $_GET['role'] : 'member';
                                 <option value="company" <?php echo $default_role === 'company' ? 'selected' : ''; ?>>Company</option>
                             </select>
                         </div>
+                        <input type="hidden" name="token" value="<?php echo htmlspecialchars($_SESSION['token'], ENT_QUOTES, 'UTF-8'); ?>">
                         
                         <button type="submit" class="btn btn-primary w-100">Register</button>
                     </form>
