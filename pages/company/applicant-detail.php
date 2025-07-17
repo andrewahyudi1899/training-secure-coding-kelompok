@@ -6,26 +6,48 @@ require_once '../../templates/header.php';
 require_once '../../templates/nav.php';
 
 $auth = new Auth();
-$auth->checkAccess('company');
+if (!$auth->checkAccess('company')) {
+    echo '<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#f8f9fa;">
+        <div style="background:#fff;padding:40px 60px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1);text-align:center;">
+            <h2 style="color:#dc3545;margin-bottom:20px;">Access Denied</h2>
+            <p style="font-size:18px;color:#333;">You must be a <strong>company</strong> to view this page.</p>
+        </div>
+        </div>';
+    exit;
+}
 
 $application_id = $_GET['id'] ?? 0; // Vulnerable to SQL injection
+// tambahan untuk parse INT
+$application_id = (int)$_GET['id'];
 
 require_once '../../config/database.php';
 $db = new Database();
 $conn = $db->getConnection();
 
-$user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
-
+$user_id = isset($_SESSION['user_id']) ? htmlspecialchars($_SESSION['user_id']) : 0;
+// ----before----
 // Vulnerable: No proper authorization check
+// $query = "SELECT ja.*, j.title as job_title, j.description as job_description,
+//                  u.username, u.email, mp.full_name, mp.phone, mp.address, mp.profile_photo, mp.cv_file
+//          FROM job_applications ja
+//          JOIN jobs j ON ja.job_id = j.id
+//          JOIN users u ON ja.user_id = u.id
+//          LEFT JOIN member_profiles mp ON u.id = mp.user_id
+//          WHERE ja.id = ?";
+
+// $result = $conn->prepare($query);
+// $result->execute([$application_id]);
+// ----after----
 $query = "SELECT ja.*, j.title as job_title, j.description as job_description,
                  u.username, u.email, mp.full_name, mp.phone, mp.address, mp.profile_photo, mp.cv_file
          FROM job_applications ja
          JOIN jobs j ON ja.job_id = j.id
          JOIN users u ON ja.user_id = u.id
          LEFT JOIN member_profiles mp ON u.id = mp.user_id
-         WHERE ja.id = $application_id";
+         WHERE ja.id = ?";
 
-$result = $conn->query($query);
+$result = $conn->prepare($query);
+$result->execute([$application_id]);
 $application = $result->fetch(PDO::FETCH_ASSOC);
 
 if (!$application) {
@@ -34,12 +56,21 @@ if (!$application) {
 }
 
 // Get applicant skills
-$skills_query = "SELECT * FROM skills WHERE user_id = " . $application['user_id'];
-$skills = $conn->query($skills_query);
+// ----before----
+// $skills_query = "SELECT * FROM skills WHERE user_id = ".$application['user_id'];
+// ----after----
+$skills_query = "SELECT * FROM skills WHERE user_id = ?";
+$skills = $conn->prepare($skills_query);
+$skills->execute([$application['user_id']]);
+
 
 // Get applicant education
-$education_query = "SELECT * FROM education WHERE user_id = " . $application['user_id'] . " ORDER BY start_date DESC";
-$education = $conn->query($education_query);
+// ----before----
+// $education_query = "SELECT * FROM education WHERE user_id = " . $application['user_id'] . " ORDER BY start_date DESC";
+// ----after----
+$education_query = "SELECT * FROM education WHERE user_id = ? ORDER BY start_date DESC";
+$education = $conn->prepare($education_query);
+$education->execute([$application['user_id']]);
 ?>
 
 <div class="container-fluid">
@@ -109,7 +140,10 @@ $education = $conn->query($education_query);
                                 <h5>Cover Letter</h5>
                                 <!-- Vulnerable: XSS -->
                                 <div class="border p-3 rounded bg-light mb-4">
-                                    <?php echo nl2br($application['cover_letter']); ?>
+                                    <!-- before -->
+                                    <!-- <?php // echo nl2br($application['cover_letter']); ?> -->
+                                     <!-- after -->
+                                    <?php echo nl2br(htmlspecialchars($application['cover_letter'])); ?>
                                 </div>
                                 
                                 <?php if ($application['address']): ?>

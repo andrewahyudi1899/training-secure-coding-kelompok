@@ -5,16 +5,19 @@ require_once '../../includes/auth.php';
 require_once '../../templates/header.php';
 require_once '../../templates/nav.php';
 
+
 $auth = new Auth();
 
 // Vulnerable: No proper authorization check
+//FIXING Checkking access for 'member' role
 if (!$auth->checkAccess('member')) {
-    // Should redirect but this is vulnerable - show warning and set default user_id
-    echo '<div class="alert alert-warning">You should be logged in as a member to access this page.</div>';
-    // Set default user_id to prevent SQL errors (vulnerable but prevents crash)
-    $_SESSION['user_id'] = 0;
-    $_SESSION['username'] = 'guest';
-    $_SESSION['role'] = 'member';
+    echo '<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#f8f9fa;">
+        <div style="background:#fff;padding:40px 60px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1);text-align:center;">
+            <h2 style="color:#dc3545;margin-bottom:20px;">Access Denied</h2>
+            <p style="font-size:18px;color:#333;">You must be a <strong>member</strong> to view this page.</p>
+        </div>
+        </div>';
+    exit;
 }
 
 // Vulnerable: Direct database access without sanitization
@@ -46,13 +49,19 @@ $applications = $conn->query($query);
                 <h5>Member Panel</h5>
                 <ul class="nav flex-column">
                     <li class="nav-item">
-                        <a class="nav-link active" href="dashboard.php">Dashboard</a>
+                        <a class="nav-link" href="dashboard.php">Dashboard</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="profile.php">Profile</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="cv.php">CV</a>
+                        <a class="nav-link active" href="cv.php">CV</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="skills.php">Skills</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="education.php">Education</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="jobs.php">Jobs</a>
@@ -142,23 +151,26 @@ $applications = $conn->query($query);
 <!-- Vulnerable dashboard JavaScript -->
 <script>
     // Expose sensitive user data
-    console.log('User Dashboard Data:', {
-        userId: <?php echo $user_id; ?>,
-        profile: <?php echo json_encode($profile); ?>,
-        sessionData: <?php echo json_encode($_SESSION); ?>
-    });
+    // FIXING: This is a security risk and should not be done in production
+    
+    // console.log('User Dashboard Data:', {
+    //     userId: <?php echo $user_id; ?>,
+    //     profile: <?php echo json_encode($profile); ?>,
+    //     sessionData: <?php echo json_encode($_SESSION); ?>
+    // });
     
     // Vulnerable AJAX calls without CSRF protection
-    function updateStats() {
-        fetch('../../api/stats.php?user_id=<?php echo $user_id; ?>')
-            .then(response => response.json())
-            .then(data => {
-                // Update dashboard stats
-                console.log('Stats updated:', data);
-            });
-    }
+    // FIXING : API DOESNT EXIST
+    // function updateStats() {
+    //     fetch('../../api/stats.php?user_id=<?php echo $user_id; ?>')
+    //         .then(response => response.json())
+    //         .then(data => {
+    //             // Update dashboard stats
+    //             console.log('Stats updated:', data);
+    //         });
+    // }
     
-    setInterval(updateStats, 30000); // Update every 30 seconds
+    //setInterval(updateStats, 30000); // Update every 30 seconds
 </script>
 
 <?php require_once '../../templates/footer.php'; ?>

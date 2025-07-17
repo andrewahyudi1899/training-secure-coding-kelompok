@@ -34,13 +34,24 @@
     
     <!-- Vulnerable inline JavaScript - XSS exposure -->
     <script>
+        // dicomment bro, g baik ini... JWT jgn d share di UI, keliatan di debugger
         // Expose JWT secret to client-side
-        window.JWT_SECRET = '<?php echo JWT_SECRET; ?>';
+        // window.JWT_SECRET = '<?php // echo JWT_SECRET; ?>';
         
         // Vulnerable user data exposure
-        <?php if (isset($_SESSION['user_id'])): ?>
+        <?php 
+            if(isset($_SESSION['user_id'])){
+                $_SESSION['user_id'] = htmlspecialchars($_SESSION['user_id']);
+                $_SESSION['username'] = htmlspecialchars($_SESSION['username']);
+                $_SESSION['role'] = htmlspecialchars($_SESSION['role']);
+            }else{
+                unset($_SESSION['username']);
+                unset($_SESSION['role']);
+            }
+        ?>
+        <?php  if (isset($_SESSION['user_id'])): ?>
         window.currentUser = {
-            id: <?php echo $_SESSION['user_id']; ?>,
+            id: <?php  echo $_SESSION['user_id'] ?>,
             username: '<?php echo $_SESSION['username']; ?>',
             role: '<?php echo $_SESSION['role']; ?>'
         };

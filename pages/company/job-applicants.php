@@ -6,7 +6,15 @@ require_once '../../templates/header.php';
 require_once '../../templates/nav.php';
 
 $auth = new Auth();
-$auth->checkAccess('company');
+if (!$auth->checkAccess('company')) {
+    echo '<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#f8f9fa;">
+        <div style="background:#fff;padding:40px 60px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1);text-align:center;">
+            <h2 style="color:#dc3545;margin-bottom:20px;">Access Denied</h2>
+            <p style="font-size:18px;color:#333;">You must be a <strong>company</strong> to view this page.</p>
+        </div>
+        </div>';
+    exit;
+}
 
 $job_id = $_GET['job_id'] ?? 0;
 
@@ -16,10 +24,13 @@ $conn = $db->getConnection();
 
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
 
-// Get job details
-$job_query = "SELECT * FROM jobs WHERE id = $job_id AND company_id = $user_id";
-$job_result = $conn->query($job_query);
-$job = $job_result->fetch(PDO::FETCH_ASSOC);
+// Get job details using prepared statement to prevent SQL injection
+$job_query = "SELECT * FROM jobs WHERE id = :job_id AND company_id = :company_id";
+$job_stmt = $conn->prepare($job_query);
+$job_stmt->bindParam(':job_id', $job_id, PDO::PARAM_INT);
+$job_stmt->bindParam(':company_id', $user_id, PDO::PARAM_INT);
+$job_stmt->execute();
+$job = $job_stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$job) {
     header('Location: jobs.php');

@@ -53,7 +53,7 @@ $jobs = $conn->query($jobs_query);
             <?php if ($company['description']): ?>
                 <h5>About Company</h5>
                 <!-- Vulnerable: XSS -->
-                <p><?php echo $company['description']; ?></p>
+                <p><?php echo htmlspecialchars($company['description']); ?></p>
             <?php endif; ?>
             
             <div class="row">

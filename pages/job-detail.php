@@ -10,14 +10,28 @@ require_once '../config/database.php';
 $db = new Database();
 $conn = $db->getConnection();
 
-// Vulnerable: SQL injection
-$query = "SELECT j.*, c.company_name, c.description as company_description, c.website 
-         FROM jobs j 
-         JOIN company_profiles c ON j.company_id = c.user_id 
-         WHERE j.id = $job_id";
 
-$result = $conn->query($query);
-$job = $result->fetch(PDO::FETCH_ASSOC);
+// Vulnerable: SQL injection
+// $query = "SELECT j.*, c.company_name, c.description as company_description, c.website 
+//          FROM jobs j 
+//          JOIN company_profiles c ON j.company_id = c.user_id 
+//          WHERE j.id = $job_id";
+
+// $result = $conn->query($query);
+// $job = $result->fetch(PDO::FETCH_ASSOC);
+
+// change to prepared statement to prevent SQL injection
+$query = "SELECT j.*, c.company_name, c.description AS company_description, c.website 
+          FROM jobs j 
+          JOIN company_profiles c ON j.company_id = c.user_id 
+          WHERE j.id = :job_id";
+
+$stmt = $conn->prepare($query);
+$stmt->bindParam(':job_id', $job_id, PDO::PARAM_INT);
+$stmt->execute();
+
+$job = $stmt->fetch(PDO::FETCH_ASSOC);
+
 
 if (!$job) {
     header('Location: jobs.php');
@@ -67,15 +81,15 @@ if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'member') {
                     
                     <h4>Job Description</h4>
                     <!-- Vulnerable: XSS -->
-                    <div class="mb-4"><?php echo $job['description']; ?></div>
+                    <div class="mb-4"><?php echo htmlspecialchars($job['description']); ?></div>
                     
                     <h4>Requirements</h4>
                     <!-- Vulnerable: XSS -->
-                    <div class="mb-4"><?php echo $job['requirements']; ?></div>
+                    <div class="mb-4"><?php echo htmlspecialchars($job['requirements']); ?></div>
                     
                     <h4>About Company</h4>
                     <!-- Vulnerable: XSS -->
-                    <p><?php echo $job['company_description']; ?></p>
+                    <p><?php echo htmlspecialchars($job['company_description']); ?></p>
                     
                     <?php if ($job['website']): ?>
                         <p><strong>Website:</strong> 
