@@ -12,48 +12,56 @@ if (isset($_SESSION['user_id'])) {
     exit();
 }
 
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // Handle registration BEFORE any output
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'];
-    $email = $_POST['email'];
-    $password = $_POST['password'];
-    $confirm_password = $_POST['confirm_password'];
-    $role = $_POST['role'];
 
-    if($password !== $confirm_password) {
-        $error = "Passwords do not match!";
-        // return;
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $error = 'Invalid CSRF token';
     } else {
-        // Vulnerable: No input validation
-        // Vulnerable: No password confirmation check
-        // Vulnerable: No password complexity requirements
-        // cek langsung dari Auth - aja buat validasi global
-        $auth = new Auth();
-        
-        // Store password in plain text - major vulnerability
-        $register = $auth->register($username, $email, $password, $role);
-        $status = $register['status'];
-        $responseMessage = $register['message'];
-        if ($status == true) {
-            // Send verification email after successful registration
-            require_once '../../includes/email.php';
-            $emailService = new EmailService();
-            $verification_token = bin2hex(random_bytes(32));
-    
-            // Send registration email
-            $emailSent = $emailService->sendRegistrationEmail($email, $username, $verification_token);
-    
-            if ($emailSent) {
-                $message = 'Registration successful! Please check your email to verify your account.';
-            } else {
-                $message = 'Registration successful! However, there was an issue sending the verification email. Please contact support.';
-            }
+        $username = $_POST['username'];
+        $email = $_POST['email'];
+        $password = $_POST['password'];
+        $confirm_password = $_POST['confirm_password'];
+        $role = $_POST['role'];
+
+        if($password !== $confirm_password) {
+            $error = "Passwords do not match!";
+            // return;
         } else {
-            $error = 'Registration failed. Please try again.';
-            $error = $responseMessage;
+            // Vulnerable: No input validation
+            // Vulnerable: No password confirmation check
+            // Vulnerable: No password complexity requirements
+            // cek langsung dari Auth - aja buat validasi global
+            $auth = new Auth();
+            
+            // Store password in plain text - major vulnerability
+            $register = $auth->register($username, $email, $password, $role);
+            $status = $register['status'];
+            $responseMessage = $register['message'];
+            if ($status == true) {
+                // Send verification email after successful registration
+                require_once '../../includes/email.php';
+                $emailService = new EmailService();
+                $verification_token = bin2hex(random_bytes(32));
+        
+                // Send registration email
+                $emailSent = $emailService->sendRegistrationEmail($email, $username, $verification_token);
+        
+                if ($emailSent) {
+                    $message = 'Registration successful! Please check your email to verify your account.';
+                } else {
+                    $message = 'Registration successful! However, there was an issue sending the verification email. Please contact support.';
+                }
+            } else {
+                $error = 'Registration failed. Please try again.';
+                $error = $responseMessage;
+            }
         }
     }
-    
 }
 
 // Include templates AFTER registration processing
