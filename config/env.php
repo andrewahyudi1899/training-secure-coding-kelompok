@@ -22,7 +22,7 @@ define('UPLOAD_ALLOWED_TYPES', ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx
 define('UPLOAD_PATH', 'uploads/');
 
 // Base URL
-define('BASE_URL', 'http://localhost:8004');
+define('BASE_URL', 'http://localhost/training-secure-coding-kelompok');
 
 // Session configuration moved to includes/session.php
 ?>

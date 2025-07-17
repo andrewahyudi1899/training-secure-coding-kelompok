@@ -3,7 +3,16 @@ require_once __DIR__ . '/../config/env.php';
 
 class FileUpload {
     // Vulnerable file upload
-    public static function uploadFile($file, $subfolder = '') {
+    // FIXING
+    public static function uploadFile($file, $subfolder = '', $allowedExtensions = []) {
+        $responseData = [
+            'status' => true,
+            'message' => '',
+            'data' => [
+                'target_file' => ''
+            ]
+        ];
+
         $target_dir = UPLOAD_PATH . $subfolder . '/';
         
         // Create directory if not exists
@@ -12,20 +21,42 @@ class FileUpload {
         }
         
         $original_name = $file['name'];
+        $original_size = $file['size'];
         $file_extension = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
-        
+
         // No file type validation
+        // FIXING
+        $allowed_extensions = $allowedExtensions;
+        // if (count($allowed_extensions) == 0) {
+        //     $allowed_extensions = UPLOAD_ALLOWED_TYPES;
+        // }
+        if (!in_array($file_extension, $allowed_extensions)) {
+            $responseData['status'] = false;
+            $responseData['message'] = 'File upload not allowed';
+
+            return $responseData;
+        }
+
         // No file size validation
+        // FIXING
+        if ($original_size > UPLOAD_MAX_SIZE) {
+            $responseData['status'] = false;
+            $responseData['message'] = 'File upload exceed size limit';
+
+            return $responseData;
+        }
+
         // No filename sanitization
+        
         
         $target_file = $target_dir . $original_name;
         
         // Path traversal vulnerability
         if (move_uploaded_file($file['tmp_name'], $target_file)) {
-            return $target_file;
+            $responseData['data']['target_file'] = $target_file;
         }
-        
-        return false;
+
+        return $responseData;
     }
     
     // Vulnerable file deletion

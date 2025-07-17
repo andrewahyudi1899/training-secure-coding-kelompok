@@ -12,6 +12,20 @@ $auth->checkAccess('member');
 $message = '';
 $error = '';
 
+$key = hash('sha256', 'your-secret-key');
+
+function encrypt($plaintext, $key) {
+    $cipher = 'AES-128-ECB';
+
+    return openssl_encrypt($plaintext, $cipher, $key);
+}
+
+function decrypt($ciphertext, $key) {
+    $cipher = 'AES-128-ECB';
+
+    return openssl_decrypt($ciphertext, $cipher, $key);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
     
@@ -19,28 +33,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($user_id <= 0) {
         $error = 'You must be logged in to perform this action.';
     } else {
-    
-    // Vulnerable file upload
-    if (isset($_FILES['cv_file']) && $_FILES['cv_file']['error'] === 0) {
-        $cv_file = FileUpload::uploadFile($_FILES['cv_file'], 'cvs');
-        
-        if ($cv_file) {
-            require_once '../../config/database.php';
-            $db = new Database();
-            $conn = $db->getConnection();
+        // Vulnerable file upload
+        if (isset($_FILES['cv_file']) && $_FILES['cv_file']['error'] === 0) {
+            $cv_file = FileUpload::uploadFile($_FILES['cv_file'], 'cvs', ['pdf', 'doc', 'docx']);
             
-            // Vulnerable: SQL injection
-            $query = "UPDATE member_profiles SET cv_file = '$cv_file' WHERE user_id = $user_id";
-            
-            if ($conn->query($query)) {
-                $message = 'CV uploaded successfully!';
+            if ($cv_file['status']) {
+                require_once '../../config/database.php';
+                $db = new Database();
+                $conn = $db->getConnection();
+                
+                // Vulnerable: SQL injection
+                // FIXING
+                $query = "UPDATE member_profiles SET cv_file = :cvfile WHERE user_id = :userid";
+
+                $stmt = $conn->prepare($query);
+                $stmt->bindParam(':cvfile', $cv_file['data']['target_file']);
+                $stmt->bindParam(':userid', $user_id);
+                
+                if ($stmt->execute()) {
+                    $message = 'CV uploaded successfully!';
+                } else {
+                    $error = 'Failed to update CV.';
+                }
             } else {
-                $error = 'Failed to update CV.';
+                // $error = 'Failed to upload CV file.';
+                $error = $cv_file['message'];
             }
-        } else {
-            $error = 'Failed to upload CV file.';
         }
-    }
 
     }}
 
@@ -50,9 +69,19 @@ $db = new Database();
 $conn = $db->getConnection();
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
 
-$query = "SELECT cv_file FROM member_profiles WHERE user_id = $user_id";
-$result = $conn->query($query);
-$profile = $result->fetch(PDO::FETCH_ASSOC);
+// FIXING
+$query = "SELECT cv_file FROM member_profiles WHERE user_id = :userid";
+
+$stmt = $conn->prepare($query);
+$stmt->bindParam(':userid', $user_id);
+$stmt->execute();
+
+$result = $stmt->fetchAll();
+if ($result && count($result) > 0) {
+    $profile = $result[0];
+} else {
+    $profile = [];
+}
 ?>
 
 <div class="container-fluid">
@@ -115,6 +144,7 @@ $profile = $result->fetch(PDO::FETCH_ASSOC);
                                             View Current CV
                                         </a>
                                         <!-- Vulnerable: Direct file deletion -->
+                                        <!-- FIXING -->
                                         <a href="?delete=<?php echo $profile['cv_file']; ?>" class="btn btn-sm btn-danger ms-2" 
                                            onclick="return confirm('Delete CV?')">Delete</a>
                                     </div>
@@ -134,7 +164,21 @@ $profile = $result->fetch(PDO::FETCH_ASSOC);
 // Vulnerable: File deletion without proper authorization
 if (isset($_GET['delete'])) {
     $file_to_delete = $_GET['delete'];
+
+    require_once '../../config/database.php';
+    $db = new Database();
+    $conn = $db->getConnection();
+
+    // FIXING
     FileUpload::deleteFile($file_to_delete);
+
+    $query = "UPDATE member_profiles SET cv_file = :cvfile WHERE user_id = :userid";
+
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':cvfile', '');
+    $stmt->bindParam(':userid', $user_id);
+    $stmt->execute();
+
     header('Location: cv.php');
     exit;
 }

@@ -28,31 +28,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $phone_escaped = addslashes($phone);
         $address_escaped = addslashes($address);
 
+        $is_error = false;
+
         // Vulnerable file upload
-        $profile_photo = '';
+        $profile_photo = [];
         if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] === 0) {
-            $profile_photo = FileUpload::uploadFile($_FILES['profile_photo'], 'profiles');
-        }
-        $profile_photo_escaped = addslashes($profile_photo);
+            $profile_photo = FileUpload::uploadFile($_FILES['profile_photo'], 'profiles', ['jpg', 'jpeg', 'png', 'gif']);
 
-        require_once '../../config/database.php';
-        $db = new Database();
-        $conn = $db->getConnection();
-
-        // Vulnerable: SQL injection (still possible with addslashes bypass) but prevents crashes
-        $query = "INSERT INTO member_profiles (user_id, full_name, phone, address, profile_photo)
-                 VALUES ('$user_id', '$full_name_escaped', '$phone_escaped', '$address_escaped', '$profile_photo_escaped')
-                 ON DUPLICATE KEY UPDATE
-                 full_name = '$full_name_escaped', phone = '$phone_escaped', address = '$address_escaped'";
-
-        if ($profile_photo_escaped) {
-            $query .= ", profile_photo = '$profile_photo_escaped'";
+            if (!$profile_photo['status']) {
+                $is_error = true;
+                $error = $profile_photo['message'];
+            }
         }
 
-        if ($conn->query($query)) {
-            $message = 'Profile updated successfully!';
-        } else {
-            $error = 'Failed to update profile.';
+        if (!$is_error) {
+            $profile_photo_escaped = addslashes(array_key_exists('data', $profile_photo) ? $profile_photo['data']['target_file'] : '');
+
+            require_once '../../config/database.php';
+            $db = new Database();
+            $conn = $db->getConnection();
+
+            // FIXING
+            $query = 'SELECT * FROM member_profiles WHERE user_id = :userid';
+
+            $stmt = $conn->prepare($query);
+            $stmt->bindParam(":userid", $user_id);
+            $stmt->execute();
+
+            $result = $stmt->fetchAll();
+            if ($result && count($result) > 0) {
+                // UPDATE DATA
+                // FIXING
+                $query = "UPDATE member_profiles SET full_name = :fullnameescaped, phone = :phoneescaped, address = :addressescaped";
+                if ($profile_photo_escaped) {
+                    $query .= ", profile_photo = :profilephotoescaped";
+                }
+                $query .= " WHERE user_id = :userid";
+
+                $stmt = $conn->prepare($query);
+                $stmt->bindParam(":fullnameescaped", $full_name_escaped);
+                $stmt->bindParam(":phoneescaped", $phone_escaped);
+                $stmt->bindParam(":addressescaped", $address_escaped);
+                if ($profile_photo_escaped) {
+                    $stmt->bindParam(":profilephotoescaped", $profile_photo_escaped);
+                }
+                $stmt->bindParam(":userid", $user_id);
+
+                if ($stmt->execute()) {
+                    $message = 'Profile updated successfully!';
+                } else {
+                    $error = 'Failed to update profile.';
+                }
+            } else {
+                // INSERT DATA
+                // Vulnerable: SQL injection (still possible with addslashes bypass) but prevents crashes
+                // FIXING
+                $query = "INSERT INTO member_profiles (id, user_id, full_name, phone, address, profile_photo)
+                        VALUES (NULL, :userid, :fullnameescaped, :phoneescaped, :addressescaped, :profilephotoescaped)";
+                $stmt = $conn->prepare($query);
+                $stmt->bindParam(":userid", $user_id);
+                $stmt->bindParam(":fullnameescaped", $full_name_escaped);
+                $stmt->bindParam(":phoneescaped", $phone_escaped);
+                $stmt->bindParam(":addressescaped", $address_escaped);
+                $stmt->bindParam(":profilephotoescaped", $profile_photo_escaped);
+
+                if ($stmt->execute()) {
+                    $message = 'Profile updated successfully!';
+                } else {
+                    $error = 'Failed to update profile.';
+                }
+            }
         }
     }
 }
@@ -63,9 +108,19 @@ $db = new Database();
 $conn = $db->getConnection();
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
 
-$query = "SELECT * FROM member_profiles WHERE user_id = $user_id ORDER BY id DESC";
-$result = $conn->query($query);
-$profile = $result->fetch(PDO::FETCH_ASSOC);
+// FIXING
+$query = "SELECT * FROM member_profiles WHERE user_id = :userid ORDER BY id DESC";
+
+$stmt = $conn->prepare($query);
+$stmt->bindParam(':userid', $user_id);
+$stmt->execute();
+
+$result = $stmt->fetchAll();
+if ($result && count($result) > 0) {
+    $profile = $result[0];
+} else {
+    $profile = [];
+}
 ?>
 
 <div class="container-fluid">

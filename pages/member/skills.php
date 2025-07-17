@@ -11,6 +11,20 @@ $auth->checkAccess('member');
 $message = '';
 $error = '';
 
+$key = hash('sha256', 'your-secret-key');
+
+function encrypt($plaintext, $key) {
+    $cipher = 'AES-128-ECB';
+
+    return openssl_encrypt($plaintext, $cipher, $key);
+}
+
+function decrypt($ciphertext, $key) {
+    $cipher = 'AES-128-ECB';
+
+    return openssl_decrypt($ciphertext, $cipher, $key);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
     
@@ -26,13 +40,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $conn = $db->getConnection();
 
     // Use addslashes to prevent SQL crash but still vulnerable to XSS
-    $skill_name_escaped = addslashes($skill_name);
-    $level_escaped = addslashes($level);
+    // FIXING
+    $skill_name_escaped = addslashes(htmlspecialchars($skill_name));
+    $level_escaped = addslashes(htmlspecialchars($level));
 
     // Vulnerable: SQL injection (still possible with addslashes bypass)
-    $query = "INSERT INTO skills (user_id, skill_name, level) VALUES ($user_id, '$skill_name_escaped', '$level_escaped')";
+    // FIXING
+    $query = "INSERT INTO skills (user_id, skill_name, level) VALUES (:user_id, :skill_name_escaped, :level_escaped)";
 
-    if ($conn->query($query)) {
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':user_id', $user_id);
+    $stmt->bindParam(':skill_name_escaped', $skill_name_escaped);
+    $stmt->bindParam(':level_escaped', $level_escaped);
+
+    if ($stmt->execute()) {
         $message = 'Skill added successfully!';
     } else {
         $error = 'Failed to add skill.';
@@ -136,7 +157,8 @@ $skills = $conn->query($query);
                                                 <small class="text-muted"><?php echo ucfirst($skill['level']); ?></small>
                                             </div>
                                             <!-- Vulnerable: Direct object reference -->
-                                            <a href="?delete_skill=<?php echo $skill['id']; ?>" class="btn btn-sm btn-danger" 
+                                            <!-- FIXING -->
+                                            <a href="?delete_skill=<?php echo encrypt($skill['id'], $key); ?>" class="btn btn-sm btn-danger" 
                                                onclick="return confirm('Delete skill?')">Delete</a>
                                         </div>
                                     <?php endwhile; ?>
@@ -155,14 +177,19 @@ $skills = $conn->query($query);
 <?php
 // Vulnerable: Delete skill without proper authorization
 if (isset($_GET['delete_skill'])) {
-    $skill_id = addslashes($_GET['delete_skill']); // Prevent SQL crash but still vulnerable
+    // FIXING
+    $skill_id = addslashes(htmlspecialchars(decrypt($_GET['delete_skill'], $key))); // Prevent SQL crash but still vulnerable
     require_once '../../config/database.php';
     $db = new Database();
     $conn = $db->getConnection();
 
+    // FIXING
     // Vulnerable: No ownership check, still possible SQL injection
-    $query = "DELETE FROM skills WHERE id = '$skill_id'";
-    $conn->query($query);
+    $query = "DELETE FROM skills WHERE id = :skillid";
+
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':skillid', $skill_id);
+    $stmt->execute();
 
     header('Location: skills.php');
     exit;
