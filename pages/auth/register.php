@@ -22,11 +22,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         $error = 'Invalid CSRF token';
     } else {
-        $username = $_POST['username'];
-        $email = $_POST['email'];
-        $password = $_POST['password'];
-        $confirm_password = $_POST['confirm_password'];
-        $role = $_POST['role'];
+        $username = htmlspecialchars($_POST['username']);
+        $email = htmlspecialchars($_POST['email']);
+        $password = htmlspecialchars($_POST['password']);
+        $confirm_password = htmlspecialchars($_POST['confirm_password']);
+        $role = htmlspecialchars($_POST['role']);
 
         if($password !== $confirm_password) {
             $error = "Passwords do not match!";
