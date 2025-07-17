@@ -4,6 +4,7 @@ require_once '../../config/env.php';
 require_once '../../includes/auth.php';
 require_once '../../templates/header.php';
 require_once '../../templates/nav.php';
+include '../../templates/validate_company.php';
 
 $auth = new Auth();
 $auth->checkAccess('member');
