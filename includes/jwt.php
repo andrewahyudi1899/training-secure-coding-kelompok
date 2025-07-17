@@ -25,11 +25,21 @@ class JWT {
         if (count($parts) !== 3) {
             return false;
         }
-        
-        $payload = json_decode(base64_decode($parts[1]), true);
-        
-        // Skip signature verification - major vulnerability
-        return $payload;
+
+        list($base64Header, $base64Payload, $base64Signature) = $parts;
+
+        $signatureCheck = hash_hmac('sha256', "$base64Header.$base64Payload", self::$secret, true);
+        $expectedSignature = self::base64UrlEncode($signatureCheck);
+
+        if (!hash_equals($expectedSignature, $base64Signature)) {
+            return false;
+        }
+
+        return json_decode(base64_decode(strtr($base64Payload, '-_', '+/')), true);
+    }
+
+    private static function base64UrlEncode($data) {
+        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
     }
     
     // Expose secret in client-side
