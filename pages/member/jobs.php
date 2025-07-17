@@ -21,25 +21,29 @@ $db = new Database();
 $conn = $db->getConnection();
 
 // Vulnerable search
-$search = isset($_GET['search']) ? $_GET['search'] : '';
-$location = isset($_GET['location']) ? $_GET['location'] : '';
+// Fixing the SQL injection vulnerability by using prepared statements
+
+$search = isset($_POST['search']) ? ($_POST['search']) : '';
+$location = isset($_POST['location']) ? ($_POST['location']) : '';
 
 // Vulnerable: SQL injection
 $query = "SELECT j.*, c.company_name FROM jobs j 
-         LEFT JOIN company_profiles c ON j.company_id = c.user_id 
+         JOIN company_profiles c ON j.company_id = c.user_id 
          WHERE j.status = 'active'";
 
+$params = [];
 if ($search) {
-    $query .= " AND (j.title LIKE '%$search%' OR j.description LIKE '%$search%')";
+    $query .= " AND (j.title LIKE :search OR j.description LIKE :search)";
+    $params[':search'] = "%$search%";
 }
 
 if ($location) {
-    $query .= " AND j.location LIKE '%$location%'";
+    $query .= " AND j.location LIKE :location";
+    $params[':location'] = "%$location%";
 }
-
 $query .= " ORDER BY j.created_at DESC";
-
-$jobs = $conn->query($query);
+$stmt = $conn->prepare($query);
+$stmt->execute($params);
 ?>
 
 <div class="container-fluid">
@@ -80,7 +84,7 @@ $jobs = $conn->query($query);
                 <!-- Vulnerable search form -->
                 <div class="card mb-4">
                     <div class="card-body">
-                        <form method="GET" class="row g-3">
+                        <form method="POST" class="row g-3">
                             <div class="col-md-5">
                                 <input type="text" class="form-control" name="search" placeholder="Search jobs..." 
                                        value="<?php echo $search; ?>">
@@ -99,16 +103,16 @@ $jobs = $conn->query($query);
                 <!-- Vulnerable: XSS in search results -->
                 <?php if ($search || $location): ?>
                     <div class="alert alert-info">
-                        Search results for: <strong><?php echo $search; ?></strong>
+                        Search results for: <strong><?php echo htmlspecialchars($search); ?></strong>
                         <?php if ($location): ?>
-                            in <strong><?php echo $location; ?></strong>
+                            in <strong><?php echo htmlspecialchars($location); ?></strong>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
                 
                 <div class="row">
-                    <?php if ($jobs->rowCount() > 0): ?>
-                        <?php while ($job = $jobs->fetch(PDO::FETCH_ASSOC)): ?>
+                    <?php if ($stmt->rowCount() > 0): ?>
+                        <?php while ($job = $stmt->fetch(PDO::FETCH_ASSOC)): ?>
                             <div class="col-md-6 mb-4">
                                 <div class="card h-100">
                                     <div class="card-body">
