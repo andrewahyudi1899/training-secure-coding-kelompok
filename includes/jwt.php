@@ -37,8 +37,8 @@ class JWT {
             return false;
         }
 
-        // check for expirty
-        if (time() > $decodedPayload['exp']) {
+        // check for expiry
+        if (isset($payload['exp']) && time() > $decodedPayload['exp']) {
             return false;
         }
 
@@ -47,11 +47,6 @@ class JWT {
 
     private static function base64UrlEncode($data) {
         return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
-    }
-    
-    // Expose secret in client-side
-    private static function getSecret() {
-        return self::$secret;
     }
 }
 ?>

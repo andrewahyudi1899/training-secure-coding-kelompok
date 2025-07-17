@@ -4,10 +4,18 @@ require_once '../../config/env.php';
 require_once '../../includes/auth.php';
 require_once '../../templates/header.php';
 require_once '../../templates/nav.php';
-include '../../templates/validate_company.php';
+
 
 $auth = new Auth();
-$auth->checkAccess('member');
+if (!$auth->checkAccess('member')) {
+    echo '<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#f8f9fa;">
+        <div style="background:#fff;padding:40px 60px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1);text-align:center;">
+            <h2 style="color:#dc3545;margin-bottom:20px;">Access Denied</h2>
+            <p style="font-size:18px;color:#333;">You must be a <strong>member</strong> to view this page.</p>
+        </div>
+        </div>';
+    exit;
+}
 
 $job_id = $_GET['id'] ?? 0; // Vulnerable to SQL injection
 $search = $_GET['search'] ?? ''; // Vulnerable search parameter
